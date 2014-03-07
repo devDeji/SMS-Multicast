@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
 import android.telephony.SmsManager;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,20 +22,29 @@ import java.util.ArrayList;
 
 public class MainActivity extends Activity {
 
+    Runnable refreshListViewRunnable = new Runnable() {
+        @Override
+        public void run() {
+            refreshListView();
+        }
+    };
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals("SENT_SMS_ACTION")) {
                 Toast.makeText(MainActivity.this, "SENT", Toast.LENGTH_SHORT).show();
                 Message message = (Message) intent.getExtras().get("sent_message");
-                list.get(list.indexOf(message)).status = Message.SENT;
+                if (getResultCode() == Activity.RESULT_OK)
+                    list.get(list.indexOf(message)).status = Message.SENT;
+                else
+                    list.get(list.indexOf(message)).status = Message.FAILED;
                 refreshListView();
             }
         }
     };
     private ListView listView;
     private ArrayList<Message> list;
-
+    private Handler handler;
 
     @Override
     protected void onDestroy() {
@@ -49,8 +59,8 @@ public class MainActivity extends Activity {
         getViewers();
         setListeners();
         list = new ArrayList<>();
+        handler = new Handler();
         registerReceiver(broadcastReceiver, new IntentFilter("SENT_SMS_ACTION"));
-
     }
 
     private void getViewers() {
@@ -85,8 +95,12 @@ public class MainActivity extends Activity {
             case R.id.action_send:
                 sendSMS();
                 return true;
-            case R.id.action_clear:
+            case R.id.action_clear_sent:
                 clearListSent();
+                return true;
+            case R.id.action_clear_all:
+                list.clear();
+                refreshListView();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -124,14 +138,33 @@ public class MainActivity extends Activity {
 
     private void sendSMS() {
         Toast.makeText(this, "Sending " + list.size() + " messages.", Toast.LENGTH_SHORT).show();
-        SmsManager sms = SmsManager.getDefault();
-        for (Message message : this.list) {
-            Intent sentIntent = new Intent("SENT_SMS_ACTION");
-            sentIntent.putExtra("sent_message", message);
-            PendingIntent sentPendingIntent = PendingIntent.getBroadcast(this, 0, sentIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-            sms.sendTextMessage(message.destination, null, message.content, sentPendingIntent, null);
-            message.status = Message.SENDING;
-        }
+        final SmsManager sms = SmsManager.getDefault();
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                for (Message message : list) {
+                    if (message.isSentOut())
+                        continue;
+                    Intent sentIntent = new Intent("SENT_SMS_ACTION");
+                    sentIntent.putExtra("sent_message", message);
+                    PendingIntent sentPendingIntent = PendingIntent.getBroadcast(MainActivity.this, 0, sentIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                    ArrayList<String> contents = sms.divideMessage(message.content);
+                    ArrayList<PendingIntent> PendingIntents = new ArrayList<>();
+                    for (int i = 0; i < contents.size(); i++)
+                        PendingIntents.add(sentPendingIntent);
+                    sms.sendMultipartTextMessage(message.destination, null, contents, PendingIntents, null);
+                    message.status = Message.SENDING;
+                    handler.post(refreshListViewRunnable);
+                    try {
+                        sleep(5000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }.start();
+
     }
 
     private void clearListSent() {

@@ -24,4 +24,8 @@ public class Message implements Serializable {
     public boolean equals(Object o) {
         return (((Message) o).uuid.equals(this.uuid));
     }
+
+    public boolean isSentOut() {
+        return (status > 0);
+    }
 }
