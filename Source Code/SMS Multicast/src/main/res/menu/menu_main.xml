@@ -1,0 +1,17 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.yuzhiqiang.smsmulticast.MainActivity" >
+
+    <item android:id="@+id/action_add"
+        android:title="Add"
+        android:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_import"
+          android:title="Import"
+          android:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_send"
+        android:title="Send"
+        android:showAsAction="ifRoom" />
+    <item android:id="@+id/action_queue"
+          android:title="Send Queue"
+          android:showAsAction="never" />
+</menu>
