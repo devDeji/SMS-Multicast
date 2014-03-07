@@ -89,9 +89,6 @@ public class ImportActivity extends Activity {
                 Message message = new Message(destination, content);
                 list.add(message);
             }
-            list.add(new Message("10086", "cd1"));
-            list.add(new Message("10086", "cd2"));
-            list.add(new Message("10086", "cd3"));
         } finally {
             scanner.close();
         }

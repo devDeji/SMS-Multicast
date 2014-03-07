@@ -21,8 +21,26 @@ import java.util.ArrayList;
 
 public class MainActivity extends Activity {
 
+    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals("SENT_SMS_ACTION")) {
+                Toast.makeText(MainActivity.this, "SENT", Toast.LENGTH_SHORT).show();
+                Message message = (Message) intent.getExtras().get("sent_message");
+                list.get(list.indexOf(message)).status = Message.SENT;
+                refreshListView();
+            }
+        }
+    };
     private ListView listView;
     private ArrayList<Message> list;
+
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(broadcastReceiver);
+        super.onDestroy();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +48,9 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         getViewers();
         setListeners();
+        list = new ArrayList<>();
+        registerReceiver(broadcastReceiver, new IntentFilter("SENT_SMS_ACTION"));
+
     }
 
     private void getViewers() {
@@ -62,13 +83,10 @@ public class MainActivity extends Activity {
                 startActivityForResult(intent, 1);
                 return true;
             case R.id.action_send:
-                intent.setClass(this, QueueActivity.class);
-                intent.putExtra("Messages", this.list);
-                startActivity(intent);
-                this.list.clear();
-                refreshListView();
+                sendSMS();
                 return true;
-            case R.id.action_queue:
+            case R.id.action_clear:
+                clearListSent();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -96,11 +114,31 @@ public class MainActivity extends Activity {
                 View view = super.getView(position, convertView, parent);
                 final TextView text1 = (TextView) view.findViewById(android.R.id.text1);
                 final TextView text2 = (TextView) view.findViewById(android.R.id.text2);
-                text1.setText(list.get(position).destination);
+                text1.setText(list.get(position).status + ": " + list.get(position).destination);
                 text2.setText(list.get(position).content);
                 return view;
             }
         };
         listView.setAdapter(adapter);
+    }
+
+    private void sendSMS() {
+        Toast.makeText(this, "Sending " + list.size() + " messages.", Toast.LENGTH_SHORT).show();
+        SmsManager sms = SmsManager.getDefault();
+        for (Message message : this.list) {
+            Intent sentIntent = new Intent("SENT_SMS_ACTION");
+            sentIntent.putExtra("sent_message", message);
+            PendingIntent sentPendingIntent = PendingIntent.getBroadcast(this, 0, sentIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            sms.sendTextMessage(message.destination, null, message.content, sentPendingIntent, null);
+            message.status = Message.SENDING;
+        }
+    }
+
+    private void clearListSent() {
+        for (Message message : this.list) {
+            if (message.status == Message.SENT)
+                list.remove(message);
+        }
+        refreshListView();
     }
 }
