@@ -8,16 +8,17 @@ public class Message implements Serializable {
     public String destination;
     public String content;
     public int status;
-    public static final int PENDING = 0;
-    public static final int SENDING = 1;
-    public static final int SENT = 2;
+    public static final int NEW = 0;
+    public static final int PENDING = 1;
+    public static final int SENDING = 2;
+    public static final int SENT = 3;
     public static final int FAILED = -1;
 
     public Message(String destination, String content) {
         this.uuid = UUID.randomUUID();
         this.destination = destination;
         this.content = content;
-        this.status = PENDING;
+        this.status = NEW;
     }
 
     @Override

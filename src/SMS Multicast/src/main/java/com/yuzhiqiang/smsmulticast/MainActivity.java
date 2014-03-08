@@ -19,26 +19,28 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.UUID;
 
 public class MainActivity extends Activity {
 
-    Runnable refreshListViewRunnable = new Runnable() {
-        @Override
-        public void run() {
-            refreshListView();
-        }
-    };
+    ArrayAdapter listAdapter;
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals("SENT_SMS_ACTION")) {
-                Toast.makeText(MainActivity.this, "SENT", Toast.LENGTH_SHORT).show();
-                Message message = (Message) intent.getExtras().get("sent_message");
-                if (getResultCode() == Activity.RESULT_OK)
-                    list.get(list.indexOf(message)).status = Message.SENT;
-                else
-                    list.get(list.indexOf(message)).status = Message.FAILED;
-                refreshListView();
+            try {
+                if (intent.getAction().equals("SENT_SMS_ACTION")) {
+                    Message message = (Message) intent.getExtras().get("sent_message");
+                    Toast.makeText(MainActivity.this, "SENT: " + message.destination + "(" + list.indexOf(message) + ")", Toast.LENGTH_SHORT).show();
+                    if (getResultCode() == Activity.RESULT_OK)
+                        if(list.get(list.indexOf(message)).status != Message.FAILED)
+                            list.get(list.indexOf(message)).status = Message.SENT;
+                    else
+                        list.get(list.indexOf(message)).status = Message.FAILED;
+                    refreshListView();
+                }
+            } catch (Exception ex) {
+
             }
         }
     };
@@ -61,6 +63,7 @@ public class MainActivity extends Activity {
         list = new ArrayList<>();
         handler = new Handler();
         registerReceiver(broadcastReceiver, new IntentFilter("SENT_SMS_ACTION"));
+        setListView();
     }
 
     private void getViewers() {
@@ -73,7 +76,6 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
@@ -121,8 +123,8 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void refreshListView() {
-        ArrayAdapter adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_2, android.R.id.text1, list) {
+    private void setListView() {
+        listAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_2, android.R.id.text1, list) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
@@ -133,31 +135,51 @@ public class MainActivity extends Activity {
                 return view;
             }
         };
-        listView.setAdapter(adapter);
+        listView.setAdapter(listAdapter);
+    }
+
+    private void refreshListView() {
+        listAdapter.notifyDataSetChanged();
     }
 
     private void sendSMS() {
+        final ArrayList<Message> pendingList = new ArrayList<>();
+        for (Message message : list) {
+            if (message.isSentOut() == false) {
+                message.status = Message.PENDING;
+                pendingList.add(message);
+            }
+        }
         Toast.makeText(this, "Sending " + list.size() + " messages.", Toast.LENGTH_SHORT).show();
         final SmsManager sms = SmsManager.getDefault();
         new Thread() {
             @Override
             public void run() {
                 super.run();
-                for (Message message : list) {
-                    if (message.isSentOut())
-                        continue;
+                for (final Message message : pendingList) {
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "Sending: " + message.destination + "(" + list.indexOf(message) + ")", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                     Intent sentIntent = new Intent("SENT_SMS_ACTION");
                     sentIntent.putExtra("sent_message", message);
-                    PendingIntent sentPendingIntent = PendingIntent.getBroadcast(MainActivity.this, 0, sentIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                    PendingIntent sentPendingIntent = PendingIntent.getBroadcast(MainActivity.this, list.indexOf(message), sentIntent, PendingIntent.FLAG_CANCEL_CURRENT);
                     ArrayList<String> contents = sms.divideMessage(message.content);
                     ArrayList<PendingIntent> PendingIntents = new ArrayList<>();
                     for (int i = 0; i < contents.size(); i++)
                         PendingIntents.add(sentPendingIntent);
                     sms.sendMultipartTextMessage(message.destination, null, contents, PendingIntents, null);
                     message.status = Message.SENDING;
-                    handler.post(refreshListViewRunnable);
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            refreshListView();
+                        }
+                    });
                     try {
-                        sleep(5000);
+                        sleep(4000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -168,9 +190,14 @@ public class MainActivity extends Activity {
     }
 
     private void clearListSent() {
+        final ArrayList<Message> sentList = new ArrayList<>();
         for (Message message : this.list) {
-            if (message.status == Message.SENT)
-                list.remove(message);
+            if (message.status == Message.SENT) {
+                sentList.add(message);
+            }
+        }
+        for (Message message : sentList) {
+            this.list.remove(message);
         }
         refreshListView();
     }
