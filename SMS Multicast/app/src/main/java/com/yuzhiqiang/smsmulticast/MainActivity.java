@@ -18,10 +18,15 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.opencsv.CSVReader;
+
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.ArrayList;
 
 public class MainActivity extends Activity {
 
+	private static final int REQUEST_IMPORT_DATA = 0;
 	ArrayAdapter listAdapter;
 	private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
 		@Override
@@ -89,8 +94,9 @@ public class MainActivity extends Activity {
 			case R.id.action_add:
 				return true;
 			case R.id.action_import:
-				intent.setClass(this, ImportActivity.class);
-				startActivityForResult(intent, 1);
+				Intent intentImport = new Intent(Intent.ACTION_GET_CONTENT);
+				intentImport.setType("application/octet-stream");
+				startActivityForResult(intentImport, REQUEST_IMPORT_DATA);
 				return true;
 			case R.id.action_send:
 				sendSMS();
@@ -109,16 +115,43 @@ public class MainActivity extends Activity {
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		try {
-			if (resultCode == 1) {
-				this.list.addAll((ArrayList<Message>) data.getExtras().get("imported_data"));
+		if (resultCode == Activity.RESULT_OK) {
+			if (requestCode == REQUEST_IMPORT_DATA) {
+				String filePath = data.getData().getPath();
+				try {
+					this.list.addAll(importCSV(filePath));
+				} catch (FileNotFoundException ex) {
+					Toast.makeText(this, "File Not Found.", Toast.LENGTH_SHORT).show();
+				} catch (Exception ex) {
+					Toast.makeText(this, "Not a valid CSV file.", Toast.LENGTH_SHORT).show();
+				}
 				refreshListView();
 			}
-		} catch (NullPointerException ex) {
-			System.err.println("oops");
-		} finally {
-			super.onActivityResult(requestCode, resultCode, data);
 		}
+		super.onActivityResult(requestCode, resultCode, data);
+	}
+
+	private ArrayList<Message> importCSV(String filePath) throws Exception {
+		final FileReader fileReader = new FileReader(filePath);
+		final CSVReader csvReader = new CSVReader(fileReader);
+		final String[] header = csvReader.readNext();
+		if (header.length != 2
+				|| !header[0].equals("Phone number")
+				|| !header[1].equals("Message")) {
+			throw new Exception();
+		}
+		ArrayList<Message> list = new ArrayList<>();
+		while (true) {
+			String[] line = csvReader.readNext();
+			if (line == null)
+				break;
+			if (line.length != 2)
+				throw new Exception();
+			final String phoneNumber = line[0];
+			final String message = line[1];
+			list.add(new Message(phoneNumber, message));
+		}
+		return list;
 	}
 
 	private void setListView() {
