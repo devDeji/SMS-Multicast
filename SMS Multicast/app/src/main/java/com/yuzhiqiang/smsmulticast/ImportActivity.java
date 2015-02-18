@@ -8,10 +8,11 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import java.io.FileInputStream;
+import com.opencsv.CSVReader;
+
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 public class ImportActivity extends Activity {
 
@@ -51,7 +52,7 @@ public class ImportActivity extends Activity {
 		if (id == R.id.action_import) {
 			try {
 				String filePath = editTextFilePath.getText().toString();
-				ArrayList<Message> messages = importDataFile(filePath);
+				ArrayList<Message> messages = importCSV(filePath);
 				Intent intent = new Intent();
 				intent.putExtra("imported_data", messages);
 				this.setResult(1, intent);
@@ -66,31 +67,25 @@ public class ImportActivity extends Activity {
 		return super.onOptionsItemSelected(item);
 	}
 
-	private ArrayList<Message> importDataFile(String filePath) throws Exception {
+	private ArrayList<Message> importCSV(String filePath) throws Exception {
+		final FileReader fileReader = new FileReader(filePath);
+		final CSVReader csvReader = new CSVReader(fileReader);
+		final String[] header = csvReader.readNext();
+		if (header.length != 2
+				|| !header[0].equals("Phone number")
+				|| !header[1].equals("Message")) {
+			throw new Exception();
+		}
 		ArrayList<Message> list = new ArrayList<>();
-		FileInputStream fileInputStream = new FileInputStream(filePath);
-		Scanner scanner = new Scanner(fileInputStream);
-		try {
-			while (scanner.hasNext()) {
-				String line = scanner.nextLine();
-				int comma = line.indexOf(',');
-				int semicolon = line.indexOf(';');
-				int splitLocation;
-				if (comma != -1 && semicolon != -1)
-					splitLocation = Math.min(comma, semicolon);
-				else if (comma == -1 && semicolon != -1)
-					splitLocation = semicolon;
-				else if (comma != -1 && semicolon == -1)
-					splitLocation = comma;
-				else
-					throw new Exception();
-				String destination = line.substring(0, splitLocation);
-				String content = line.substring(splitLocation + 1);
-				Message message = new Message(destination, content);
-				list.add(message);
-			}
-		} finally {
-			scanner.close();
+		while (true) {
+			String[] line = csvReader.readNext();
+			if (line == null)
+				break;
+			if (line.length != 2)
+				throw new Exception();
+			final String phoneNumber = line[0];
+			final String message = line[1];
+			list.add(new Message(phoneNumber, message));
 		}
 		return list;
 	}
