@@ -11,11 +11,8 @@ import android.os.Handler;
 import android.telephony.SmsManager;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.opencsv.CSVReader;
@@ -23,30 +20,13 @@ import com.opencsv.CSVReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends Activity {
 
 	private static final int REQUEST_IMPORT_DATA = 0;
 	ArrayAdapter listAdapter;
-	private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			try {
-				if (intent.getAction().equals("SENT_SMS_ACTION")) {
-					Message message = (Message) intent.getExtras().get("sent_message");
-					Toast.makeText(MainActivity.this, "SENT: " + message.destination + "(" + list.indexOf(message) + ")", Toast.LENGTH_SHORT).show();
-					if (getResultCode() == Activity.RESULT_OK)
-						if (list.get(list.indexOf(message)).status != Message.FAILED)
-							list.get(list.indexOf(message)).status = Message.SENT;
-						else
-							list.get(list.indexOf(message)).status = Message.FAILED;
-					refreshListView();
-				}
-			} catch (Exception ex) {
-
-			}
-		}
-	};
+	private BroadcastReceiver broadcastReceiver;
 	private ListView listView;
 	private ArrayList<Message> list;
 	private Handler handler;
@@ -65,8 +45,31 @@ public class MainActivity extends Activity {
 		setListeners();
 		list = new ArrayList<>();
 		handler = new Handler();
-		registerReceiver(broadcastReceiver, new IntentFilter("SENT_SMS_ACTION"));
+		setupBroadcastReceiver();
 		setListView();
+	}
+
+	private void setupBroadcastReceiver() {
+		broadcastReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				try {
+					if (intent.getAction().equals("SENT_SMS_ACTION")) {
+						Message message = (Message) intent.getExtras().get("sent_message");
+						Toast.makeText(MainActivity.this, "SENT: " + message.destination + "(" + list.indexOf(message) + ")", Toast.LENGTH_SHORT).show();
+						if (getResultCode() == Activity.RESULT_OK)
+							if (list.get(list.indexOf(message)).status != Message.FAILED)
+								list.get(list.indexOf(message)).status = Message.SENT;
+							else
+								list.get(list.indexOf(message)).status = Message.FAILED;
+						refreshListView();
+					}
+				} catch (Exception ex) {
+
+				}
+			}
+		};
+		registerReceiver(broadcastReceiver, new IntentFilter("SENT_SMS_ACTION"));
 	}
 
 	private void getViewers() {
@@ -117,9 +120,10 @@ public class MainActivity extends Activity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (resultCode == Activity.RESULT_OK) {
 			if (requestCode == REQUEST_IMPORT_DATA) {
-				String filePath = data.getData().getPath();
 				try {
-					this.list.addAll(importCSV(filePath));
+					List<Message> importing = importCSV(data.getData().getPath());
+					this.list.addAll(importing);
+					Toast.makeText(this, importing.size() + " messages imported.", Toast.LENGTH_SHORT).show();
 				} catch (FileNotFoundException ex) {
 					Toast.makeText(this, "File Not Found.", Toast.LENGTH_SHORT).show();
 				} catch (Exception ex) {
@@ -155,17 +159,18 @@ public class MainActivity extends Activity {
 	}
 
 	private void setListView() {
-		listAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_2, android.R.id.text1, list) {
-			@Override
-			public View getView(int position, View convertView, ViewGroup parent) {
-				View view = super.getView(position, convertView, parent);
-				final TextView text1 = (TextView) view.findViewById(android.R.id.text1);
-				final TextView text2 = (TextView) view.findViewById(android.R.id.text2);
-				text1.setText(list.get(position).status + ": " + list.get(position).destination);
-				text2.setText(list.get(position).content);
-				return view;
-			}
-		};
+//		listAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_2, android.R.id.text1, list) {
+//			@Override
+//			public View getView(int position, View convertView, ViewGroup parent) {
+//				View view = super.getView(position, convertView, parent);
+//				final TextView text1 = (TextView) view.findViewById(android.R.id.text1);
+//				final TextView text2 = (TextView) view.findViewById(android.R.id.text2);
+//				text1.setText(list.get(position).status + ": " + list.get(position).destination);
+//				text2.setText(list.get(position).content);
+//				return view;
+//			}
+//		};
+		listAdapter = new MessageArrayAdapter(this, list);
 		listView.setAdapter(listAdapter);
 	}
 
@@ -176,7 +181,7 @@ public class MainActivity extends Activity {
 	private void sendSMS() {
 		final ArrayList<Message> pendingList = new ArrayList<>();
 		for (Message message : list) {
-			if (message.isSentOut() == false) {
+			if (!message.isSentOut()) {
 				message.status = Message.PENDING;
 				pendingList.add(message);
 			}
@@ -221,15 +226,11 @@ public class MainActivity extends Activity {
 	}
 
 	private void clearListSent() {
-		final ArrayList<Message> sentList = new ArrayList<>();
-		for (Message message : this.list) {
-			if (message.status == Message.SENT) {
-				sentList.add(message);
-			}
-		}
-		for (Message message : sentList) {
-			this.list.remove(message);
-		}
+		final ArrayList<Message> restList = new ArrayList<>();
+		for (Message message : this.list)
+			if (message.status != Message.SENT)
+				restList.add(message);
+		this.list = restList;
 		refreshListView();
 	}
 }
