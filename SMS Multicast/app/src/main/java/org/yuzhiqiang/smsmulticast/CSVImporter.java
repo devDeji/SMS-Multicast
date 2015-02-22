@@ -1,4 +1,4 @@
-package com.yuzhiqiang.smsmulticast;
+package org.yuzhiqiang.smsmulticast;
 
 import com.opencsv.CSVReader;
 

@@ -1,4 +1,4 @@
-package com.yuzhiqiang.smsmulticast;
+package org.yuzhiqiang.smsmulticast;
 
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -16,6 +16,8 @@ import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
+
+import com.yuzhiqiang.smsmulticast.R;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
