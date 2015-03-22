@@ -1,4 +1,4 @@
-package com.yuzhiqiang.smsmulticast;
+package org.yuzhiqiang.smsmulticast;
 
 import java.io.Serializable;
 import java.util.UUID;
