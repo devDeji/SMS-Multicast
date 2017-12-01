@@ -2,11 +2,31 @@
 <items version="2" >
 
     <item
-        jar="/Users/yzq/Documents/GitHub/SMS-Multicast/SMS Multicast/app/libs/opencsv-3.2.jar"
-        jumboMode="false"
-        revision="21.1.2"
+        is-multidex="true"
+        jar="/Users/user/Documents/SMS_Multicast/SMS-Multicast/SMS Multicast/app/libs/opencsv-3.2.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="25.0.0"
         sha1="11986807ecb3288728bdb33a3165ce84f057d7a4">
-        <dex dex="/Users/yzq/Documents/GitHub/SMS-Multicast/SMS Multicast/app/build/intermediates/pre-dexed/debug/opencsv-3.2-6a12736581b404aa28fe89f980e00126a5a50aed.jar" />
+        <dex dex="/Users/user/Documents/SMS_Multicast/SMS-Multicast/SMS Multicast/app/build/intermediates/transforms/dex/debug/folders/1000/2/opencsv-3.2_9f87ffabd27fa51a96fd07708253408cee08c4b6/classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="/Users/user/Documents/SMS_Multicast/SMS-Multicast/SMS Multicast/app/build/intermediates/incremental-classes/debug/instant-run-bootstrap.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="25.0.0"
+        sha1="6f93684be3b24a35b12832a73782f035d7a3c14e">
+        <dex dex="/Users/user/Documents/SMS_Multicast/SMS-Multicast/SMS Multicast/app/build/intermediates/transforms/dex/debug/folders/1000/10000/instant-run-bootstrap_805bc7879dd626a9bc5388bcafca3ed320e58b6f/classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="/Users/user/Documents/SMS_Multicast/SMS-Multicast/SMS Multicast/app/build/intermediates/incremental-runtime-classes/debug/instant-run.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="25.0.0"
+        sha1="12920f9016b8b05acbc2af7cdc13cef6946fe7d3">
+        <dex dex="/Users/user/Documents/SMS_Multicast/SMS-Multicast/SMS Multicast/app/build/intermediates/transforms/dex/debug/folders/1000/10000/instant-run_d21c423098fe564938ab274f7aaefaff038c2e83/classes.dex" />
     </item>
 
 </items>
